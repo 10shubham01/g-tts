@@ -1,21 +1,106 @@
-name: test
+name: web-deployment-1
 
 on: push
 
 jobs:
+  # 1. Code Quality
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo "Linting code..."
+
+  type-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo "Running TypeScript checks..."
+
+  # 2. Tests
+  test-unit:
+    runs-on: ubuntu-latest
+    needs: [lint, type-check]
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo "Running unit tests..."
+
+  test-integration:
+    runs-on: ubuntu-latest
+    needs: [lint, type-check]
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo "Running integration tests..."
+
+  test-e2e:
+    runs-on: ubuntu-latest
+    needs: test-integration
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo "Running end-to-end tests..."
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: [lint]
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo "Security scanning dependencies..."
+
+  performance-check:
+    runs-on: ubuntu-latest
+    needs: [test-unit, test-integration]
+    steps:
+      - uses: actions/checkout@v3
+      - run: echo "Running performance benchmarks..."
+
+  # 3. Build + Package
   build:
     runs-on: ubuntu-latest
+    needs: [test-unit, test-integration, security-scan]
     steps:
-      - run: echo "Building..."
+      - uses: actions/checkout@v3
+      - run: echo "Building project..."
 
-  report-build-status:
+  package:
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, performance-check]
     steps:
-      - run: echo "✅ Build success reported"
+      - run: echo "Packaging artifacts..."
 
-  deploy:
+  # 4. Deploy to multiple environments
+  deploy-staging:
     runs-on: ubuntu-latest
-    needs: build
+    needs: [package]
     steps:
-      - run: echo "🚀 Deploying..."
+      - run: echo "Deploying to staging..."
+
+  deploy-qa:
+    runs-on: ubuntu-latest
+    needs: [package]
+    steps:
+      - run: echo "Deploying to QA..."
+
+  deploy-uat:
+    runs-on: ubuntu-latest
+    needs: [package]
+    steps:
+      - run: echo "Deploying to UAT..."
+
+  # 5. Merge environments → Production
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-qa, deploy-uat]
+    steps:
+      - run: echo "Deploying to Production..."
+
+  # 6. Post-deploy checks
+  smoke-tests:
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    steps:
+      - run: echo "Running smoke tests..."
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [deploy-production, smoke-tests]
+    steps:
+      - run: echo "Sending Slack/Email notification..."
