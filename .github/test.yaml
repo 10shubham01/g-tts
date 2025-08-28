@@ -1,0 +1,21 @@
+name: pages-build-deployment
+
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Building..."
+
+  report-build-status:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - run: echo "✅ Build success reported"
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - run: echo "🚀 Deploying..."
